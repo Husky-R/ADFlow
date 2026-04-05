@@ -43,10 +43,10 @@ def positionalencoding2d(D_, H, W):
 def subnet_fc(dims_in, dims_out):
     return nn.Sequential(
         nn.Linear(dims_in, 2*dims_in),
-        #nn.BatchNorm1d(2*dims_in),  # 添加批归一化层
+        #nn.BatchNorm1d(2*dims_in),  
         nn.ReLU(),
         nn.Linear(2*dims_in, dims_out),
-        #nn.BatchNorm1d(dims_out)    # 可以选择在输出前也添加批归一化
+        #nn.BatchNorm1d(dims_out)    
     )
 
 def freia_flow_head(c, n_feat):
@@ -246,30 +246,26 @@ def load_encoder_arch(c, L):
         raise NotImplementedError('{} is not supported architecture!'.format(c.enc_arch))
     #
     return encoder, pool_layers, pool_dims
-# 方差估计
+
 class VarianceNet(nn.Module):
     def __init__(self, feature_dim, num_components=10):
         super(VarianceNet, self).__init__()
         self.num_components = num_components
         self.min_variance = 1e-3
-        # 使用全连接层来根据输入特征 z 计算方差
-        self.fc_variance = nn.Linear(feature_dim, num_components)  # 学习每个分量的方差
-
-        # 可学习的混合权重参数，初始值为 1/K
+        self.fc_variance = nn.Linear(feature_dim, num_components)  
         #self.weights = nn.Parameter(torch.full((num_components,), 1.0 / num_components))
-        #self.weights = nn.Parameter(torch.randn((num_components,)) * (1.0 / num_components))  # 标准正态分布缩放
+        #self.weights = nn.Parameter(torch.randn((num_components,)) * (1.0 / num_components))  
         self.weights = nn.Parameter(torch.ones(num_components) * (1.0 / num_components))
 
     def forward(self, z):
         # z shape: (N, C)
         var = self.fc_variance(z.mean(dim=0, keepdim=True))
         var = torch.clamp(var, max=4)
-        var = torch.exp(var)  # 基于输入特征计算方差，形状 (1, num_components)
+        var = torch.exp(var) 
         #var = torch.exp(self.fc_variance(z))
         var = var + self.min_variance
         var = var.clamp_(min=0, max=10.0)
-        # 可学习的混合权重，使用 softmax 保证权重和为 1
-        weights = torch.softmax(self.weights, dim=0)  # 形状 (num_components,)
+        weights = torch.softmax(self.weights, dim=0) 
 
         return var.squeeze(0), weights
 ###############################################################################################
